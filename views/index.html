@@ -11,12 +11,18 @@
   </head>
   <body>
     <div>
-      {{ .url }}
-			Click me for a picture of a Cat.
-			<button>Generate</button>
+			<button hx-target="#cat" hx-get="/cat">Generate</button>
+      <div id="cat">
+        {{ template "cat" . }}  
+      </div>
 		</div>
   </body>
 </html>
+{{ end }}
+
+{{ block "cat" . }}
+  Cat:
+  <img src="{{.Url}}" alt="cat" />
 {{ end }}
 
 

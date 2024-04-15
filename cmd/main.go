@@ -1,16 +1,14 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"html/template"
 	"io"
-	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/segmentio/encoding/json"
 )
 
 type Templates struct {
@@ -27,50 +25,40 @@ func newTemplate() *Templates {
 	}
 }
 
-type Count struct {
-	Count int
-}
-
-type ResponseData []struct {
-	ID     string `json:"id"`
-	URL    string `json:"url"`
+type Cat struct {
+	Id     string `json:"id"`
+	Url    string `json:"url"`
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 }
 
 func main() {
-	apiKey := os.Getenv("API_KEY")
-
 	e := echo.New()
 	e.Use(middleware.Logger())
-
-	count := Count{Count: 0}
 	e.Renderer = newTemplate()
 
 	e.GET("/", func(c echo.Context) error {
-		count.Count++
-		return c.Render(200, "index.html", count)
+		return c.Render(200, "index", nil)
 	})
 
 	e.GET("/cat", func(c echo.Context) error {
-		response, err := http.Get("https://api.thecatapi.com/v1/images/search?api_key=" + apiKey)
+		response, err := http.Get("https://api.thecatapi.com/v1/images/search")
 		if err != nil {
-			return c.Render(500, "error.html", nil)
+			log.Fatal(err)
 		}
 		defer response.Body.Close()
 
-		body, err := ioutil.ReadAll(response.Body)
+		body, err := io.ReadAll(response.Body)
 		if err != nil {
-			return c.Render(500, "error.html", nil)
+			log.Fatal(err)
 		}
 
-		var responseData ResponseData
-		err := json.Unmarshal(body, &responseData)
-		if err != nil {
-			return c.Render(500, "error.html", nil)
+		var cat []Cat
+		if err := json.Unmarshal([]byte(body), &cat); err != nil {
+			log.Fatal(err)
 		}
-		fmt.Println(responseData)
-		return c.Render(200, "index.html", responseData)
+
+		return c.Render(200, "cat", cat[0])
 	})
 
 	e.Logger.Fatal(e.Start(":8080"))
